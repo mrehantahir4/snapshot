@@ -9,7 +9,10 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { getAuth, signInWithEmailAndPassword, sendEmailVerification } from '@react-native-firebase/auth';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import Colors from '../../theme/color';
 import { wp, hp, scale, ms } from '../../utils/responsive';
@@ -18,9 +21,68 @@ const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    navigation?.replace('Camera');
+  const handleLogin = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      Alert.alert('Required', 'Please enter your email and password.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const auth = getAuth();
+      const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+      const user = userCredential.user;
+
+      // 🛑 Check if email is verified
+      if (user && !user.emailVerified) {
+        setLoading(false);
+        Alert.alert(
+          'Email Not Verified ⚠️',
+          'Please verify your email address before logging in. Check your inbox (or spam folder) for the verification link.',
+          [
+            {
+              text: 'Resend Email',
+              onPress: async () => {
+                try {
+                  await sendEmailVerification(user);
+                  await auth.signOut();
+                  Alert.alert('Sent', 'A new verification link has been sent to your email.');
+                } catch (e) {
+                  Alert.alert('Error', e.message || 'Could not resend email.');
+                }
+              },
+            },
+            {
+              text: 'OK',
+              onPress: async () => {
+                await auth.signOut();
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      setLoading(false);
+      navigation?.replace('Camera');
+    } catch (error) {
+      setLoading(false);
+      if (
+        error.code === 'auth/user-not-found' ||
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/invalid-credential'
+      ) {
+        Alert.alert('Login Failed', 'Invalid email or password.');
+      } else if (error.code === 'auth/invalid-email') {
+        Alert.alert('Login Failed', 'Please enter a valid email address.');
+      } else {
+        Alert.alert('Login Error', error.message || 'Something went wrong.');
+      }
+    }
   };
 
   const handleForgotPassword = () => {
@@ -105,8 +167,15 @@ const LoginScreen = ({ navigation }) => {
               </TouchableOpacity>
 
               {/* Login Button */}
-              <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                <Text style={styles.loginButtonText}>Log In</Text>
+              <TouchableOpacity
+                style={[styles.loginButton, loading && { opacity: 0.6 }]}
+                onPress={handleLogin}
+                disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator color={Colors.black} size="small" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Log In</Text>
+                )}
               </TouchableOpacity>
 
               {/* Sign Up Link */}

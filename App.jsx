@@ -9,6 +9,7 @@ import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import CameraScreen from './src/screens/CameraScreen';
 import GalleryScreen from './src/screens/GalleryScreen';
 import PreviewScreen from './src/screens/PreviewScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
@@ -22,6 +23,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Camera" component={CameraScreen} />
         <Stack.Screen name="Gallery" component={GalleryScreen} />
         <Stack.Screen name="Preview" component={PreviewScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

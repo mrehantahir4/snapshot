@@ -85,7 +85,7 @@ const PreviewScreen = ({ route, navigation }) => {
             console.log('Cloudinary credentials not configured yet.');
             return {
                 skipped: true,
-                message: 'Phone mein save ho gaya! Cloudinary credentials add karein cloud upload ke liye.',
+                message: 'Saved in memory! Add Cloudinary credentials to upload to cloud.',
             };
         }
 
@@ -132,17 +132,17 @@ const PreviewScreen = ({ route, navigation }) => {
             const cloudResult = await uploadToCloudinary();
 
             if (cloudResult?.success) {
-                Alert.alert('Saved!', 'Media aapke phone aur Cloudinary par successfully save ho gaya!');
+                Alert.alert('Saved!');
             } else if (cloudResult?.skipped) {
                 Alert.alert('Saved to Phone!', cloudResult.message);
             } else {
-                Alert.alert('Phone Saved', 'Phone memory mein save ho gaya!');
+                Alert.alert('Phone Saved');
             }
         } catch (error) {
             console.log('Save process error:', error);
             Alert.alert(
                 'Notice',
-                'Phone memory mein save ho gaya, lekin Cloudinary upload mein issue aaya: ' + (error.message || '')
+                'Saved in phone memory but not in Cloudinary ' + (error.message || '')
             );
         } finally {
             setSaving(false);

@@ -1,15 +1,24 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
+import { getAuth } from '@react-native-firebase/auth';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import Colors from '../../theme/color';
 import { wp, hp, ms } from '../../utils/responsive';
 
 const SplashScreen = ({ navigation }) => {
   useEffect(() => {
-    // 2 second baad automatic Login screen par bhej dega
     const timer = setTimeout(() => {
+      try {
+        const auth = getAuth();
+        if (auth && auth.currentUser && auth.currentUser.emailVerified) {
+          navigation.replace('Camera');
+          return;
+        }
+      } catch (err) {
+        console.log('Firebase auth check:', err);
+      }
       navigation.replace('Login');
-    }, 2000);
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [navigation]);

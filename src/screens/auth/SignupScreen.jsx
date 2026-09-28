@@ -9,7 +9,10 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { getAuth, createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from '@react-native-firebase/auth';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import Colors from '../../theme/color';
 import { wp, hp, scale, ms } from '../../utils/responsive';
@@ -21,9 +24,64 @@ const SignupScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = () => {
-    navigation?.replace('Camera');
+  const handleSignup = async () => {
+    const trimmedEmail = email.trim();
+    const trimmedName = fullName.trim();
+
+    if (!trimmedName || !trimmedEmail || !password || !confirmPassword) {
+      Alert.alert('Required', 'Please fill in all fields.');
+      return;
+    }
+
+    if (password.length < 8) {
+      Alert.alert('Weak Password', 'Password must be at least 8 characters long.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Mismatch', 'Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const auth = getAuth();
+      const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
+      const user = userCredential.user;
+
+      if (user) {
+        await updateProfile(user, { displayName: trimmedName });
+        // ✉️ Send real Firebase Email Verification link
+        await sendEmailVerification(user);
+        // Sign out unverified session
+        await auth.signOut();
+      }
+
+      setLoading(false);
+
+      Alert.alert(
+        'Verification Email Sent ✉️',
+        `A verification link has been sent to:\n${trimmedEmail}\n\nPlease check your email inbox (and spam folder), click the verification link, and then log in.`,
+        [
+          {
+            text: 'Go to Login',
+            onPress: () => navigation?.replace('Login'),
+          },
+        ]
+      );
+    } catch (error) {
+      setLoading(false);
+      if (error.code === 'auth/email-already-in-use') {
+        Alert.alert('Signup Failed', 'This email is already registered. Please login.');
+      } else if (error.code === 'auth/invalid-email') {
+        Alert.alert('Signup Failed', 'Please enter a valid email address.');
+      } else {
+        Alert.alert('Signup Error', error.message || 'Something went wrong.');
+      }
+    }
   };
 
   return (
@@ -143,8 +201,15 @@ const SignupScreen = ({ navigation }) => {
               </View>
 
               {/* Signup Button */}
-              <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
-                <Text style={styles.signupButtonText}>Create Account</Text>
+              <TouchableOpacity
+                style={[styles.signupButton, loading && { opacity: 0.6 }]}
+                onPress={handleSignup}
+                disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator color={Colors.black} size="small" />
+                ) : (
+                  <Text style={styles.signupButtonText}>Create Account</Text>
+                )}
               </TouchableOpacity>
 
               {/* Login Link */}

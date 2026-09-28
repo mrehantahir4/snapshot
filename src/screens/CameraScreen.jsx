@@ -31,6 +31,8 @@ const CameraScreen = ({ navigation }) => {
     const [timer, setTimer] = useState(0);
     const [countdown, setCountdown] = useState(null);
     const [isCountingDown, setIsCountingDown] = useState(false);
+    const [countdownTarget, setCountdownTarget] = useState(null); // 'photo' | 'video'
+    const countdownTargetRef = useRef(null);
     const [screenFlashVisible, setScreenFlashVisible] = useState(false);
 
     // Recording States
@@ -102,7 +104,7 @@ const CameraScreen = ({ navigation }) => {
 
     // 🎥 Start Video Recording
     const handleStartRecording = async () => {
-        if (isCountingDown || isRecordingRef.current) return;
+        if (isRecordingRef.current) return;
         try {
             if (!hasMicPermission) {
                 await requestMicPermission();
@@ -163,7 +165,14 @@ const CameraScreen = ({ navigation }) => {
 
     // 🎯 Shutter Tap Handler: Single Tap = Photo, Double Tap = Video Recording
     const handleShutterPress = () => {
-        if (isCountingDown) return;
+        // Agar countdown chal raha hai to tap karne se cancel ho jaye
+        if (isCountingDown) {
+            setIsCountingDown(false);
+            setCountdown(null);
+            setCountdownTarget(null);
+            countdownTargetRef.current = null;
+            return;
+        }
 
         // Agar video pehle se record ho rahi hai to click karne se STOP ho jaye
         if (isRecordingRef.current) {
@@ -181,7 +190,14 @@ const CameraScreen = ({ navigation }) => {
                 singleTapTimerRef.current = null;
             }
             lastTapRef.current = 0;
-            handleStartRecording();
+            if (timer === 0) {
+                handleStartRecording();
+            } else {
+                countdownTargetRef.current = 'video';
+                setCountdownTarget('video');
+                setIsCountingDown(true);
+                setCountdown(timer);
+            }
         } else {
             // 👉 FIRST CLICK: Wait 300ms. Agar second click na aaye to Photo capture karein
             lastTapRef.current = now;
@@ -195,6 +211,8 @@ const CameraScreen = ({ navigation }) => {
                     if (timer === 0) {
                         executeCapture();
                     } else {
+                        countdownTargetRef.current = 'photo';
+                        setCountdownTarget('photo');
                         setIsCountingDown(true);
                         setCountdown(timer);
                     }
@@ -211,9 +229,16 @@ const CameraScreen = ({ navigation }) => {
         } else if (countdown === 0) {
             setIsCountingDown(false);
             setCountdown(null);
-            executeCapture();
+            const target = countdownTargetRef.current || countdownTarget;
+            setCountdownTarget(null);
+            countdownTargetRef.current = null;
+            if (target === 'video') {
+                handleStartRecording();
+            } else {
+                executeCapture();
+            }
         }
-    }, [isCountingDown, countdown]);
+    }, [isCountingDown, countdown, countdownTarget]);
 
     const formatTimer = (seconds) => {
         const mins = Math.floor(seconds / 60);
@@ -232,7 +257,8 @@ const CameraScreen = ({ navigation }) => {
                     style={StyleSheet.absoluteFill}
                     device={device}
                     isActive={true}
-                    torch={flash && cameraType === 'back' ? 'on' : 'off'}
+                    torchMode={flash && cameraType === 'back' && device?.hasTorch ? 'on' : 'off'}
+                    torch={flash && cameraType === 'back' && device?.hasTorch ? 'on' : 'off'}
                     outputs={[photoOutput, videoOutput]}
                 />
             ) : (
@@ -258,11 +284,28 @@ const CameraScreen = ({ navigation }) => {
                 />
             )}
 
+            {/* 💡 Front Screen Flash Glow */}
+            {cameraType === 'front' && flash && (
+                <View
+                    style={[
+                        StyleSheet.absoluteFill,
+                        { backgroundColor: 'rgba(255, 255, 235, 0.35)', zIndex: 2 },
+                    ]}
+                    pointerEvents="none"
+                />
+            )}
+
             {/* Screen Flash & Countdown */}
             {screenFlashVisible && <View style={styles.screenFlash} />}
             {isCountingDown && countdown !== null && (
                 <View style={styles.countdownContainer}>
                     <Text style={styles.countdownText}>{countdown}</Text>
+                    {countdownTarget === 'video' && (
+                        <View style={styles.countdownTargetBadge}>
+                            <Ionicons name="videocam" size={ms(12)} color="#EF4444" />
+                            <Text style={styles.countdownTargetText}>VIDEO</Text>
+                        </View>
+                    )}
                 </View>
             )}
 
@@ -277,12 +320,16 @@ const CameraScreen = ({ navigation }) => {
             {/* Top Header */}
             <View style={styles.topContainer}>
                 <View style={styles.topLeft}>
-                    <TouchableOpacity style={styles.iconCircle}>
+                    <TouchableOpacity
+                        style={styles.iconCircle}
+                        onPress={() => navigation?.navigate('Profile')}
+                        activeOpacity={0.8}
+                    >
                         <Ionicons name="person" size={ms(18)} color={Colors.black} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconCircleGlass}>
+                    {/* <TouchableOpacity style={styles.iconCircleGlass}>
                         <Ionicons name="search" size={ms(18)} color={Colors.white} />
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                 </View>
 
                 <View style={styles.rightToolbar}>
@@ -430,6 +477,22 @@ const styles = StyleSheet.create({
         color: Colors.white,
         fontSize: ms(48),
         fontWeight: '900',
+    },
+    countdownTargetBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        paddingHorizontal: wp(2.5),
+        paddingVertical: hp(0.3),
+        borderRadius: ms(10),
+        marginTop: -hp(0.5),
+    },
+    countdownTargetText: {
+        color: '#EF4444',
+        fontSize: ms(10),
+        fontWeight: '800',
+        letterSpacing: 0.5,
     },
     recordingIndicator: {
         position: 'absolute',

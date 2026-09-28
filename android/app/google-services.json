@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1083968279312",
+    "project_id": "snapshot-b2a3d",
+    "storage_bucket": "snapshot-b2a3d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083968279312:android:f1e318feb9818e84c48b95",
+        "android_client_info": {
+          "package_name": "com.snapshot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCME1OyyMLA-PdoSoOeFHSQab_K7kCuxpk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
